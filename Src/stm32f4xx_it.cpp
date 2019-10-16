@@ -1,5 +1,9 @@
 #include "stm32f4xx_it.h"
 #include "stm32f407xx.h"
+#include "logger.h"
+#include "system.h"
+
+extern Logger logger;
 
 void NMI_Handler(void)
 {
@@ -120,11 +124,33 @@ extern "C"
 {
   void DMA2_Stream7_IRQHandler(void)
   {
-    GPIOD->ODR ^= 1<<12;
     if(DMA2->HISR & DMA_HISR_TCIF7)
     {
       while(!(USART1->SR & USART_SR_TC));
       DMA2->HIFCR |= DMA_HIFCR_CTCIF7;
+    }
+  }
+
+  void DMA2_Stream2_IRQHandler()
+  {
+    if(DMA2->LISR & DMA_LISR_TCIF2)
+    {
+      DMA2->LIFCR |= DMA_LIFCR_CTCIF2;
+      DMA2_Stream2->NDTR = logger.getReceivedBuffer();
+      DMA2_Stream2->CR |= DMA_SxCR_EN;
+      logger.setFlag(true);
+    }
+  }
+
+  void USART1_IRQHandler(void)
+  {
+    if(USART1->SR & USART_SR_IDLE)
+    {
+      volatile uint32_t temp = 0;
+      temp = USART1->SR;
+      temp = USART1->DR;
+      (void)temp; // shut up compiler
+      DMA2_Stream2->CR &=~DMA_SxCR_EN;
     }
   }
 }

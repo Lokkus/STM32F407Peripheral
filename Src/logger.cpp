@@ -44,9 +44,26 @@ Logger::Logger()
       DMA_SxCR_TCIE;                            // Transfer interrupt enable
 
   // config DMA for RX TBD;
+  DMA2_Stream2->PAR = (uint32_t)&USART1->DR;
+  DMA2_Stream2->M0AR = (uint32_t)dataReceived;
+  DMA2_Stream2->NDTR = RECEIVE_BUFFER;          // temp
+  DMA2_Stream2->CR |= (4 << 25) |               // Channel 4 selected
+      DMA_SxCR_MINC |                           // Memory increment mode
+      DMA_SxCR_TCIE;                            // Transfer complete interrupt enable
 
+  DMA2_Stream2->CR |=DMA_SxCR_EN;               // enable DMA2
+  USART1->CR1 |= USART_CR1_UE;                  // enable USART1
+
+  // enable interrupts
   __NVIC_SetPriority(DMA2_Stream7_IRQn, 0);
   __NVIC_EnableIRQ(DMA2_Stream7_IRQn);
+
+  __NVIC_SetPriority(DMA2_Stream2_IRQn, 0);
+  __NVIC_EnableIRQ(DMA2_Stream2_IRQn);
+
+  __NVIC_SetPriority(USART1_IRQn, 0);
+  __NVIC_EnableIRQ(USART1_IRQn);
+
 }
 
 void Logger::sendData(const string& data)
@@ -72,4 +89,31 @@ void Logger::sendData(const string& data)
 
 }
 
+void Logger::setFlag(bool val)
+{
+  flag = val;
+}
+
+bool Logger::getFlag()
+{
+  return flag;
+}
+uint32_t Logger::getReceivedBuffer()
+{
+  return RECEIVE_BUFFER;
+}
+
+string Logger::getReceivedData()
+{
+  string tmp;
+  tmp = dataReceived;
+  memset(dataReceived, 0, RECEIVE_BUFFER);
+  return tmp;
+}
+
+void Logger::clearFlag()
+{
+  std::ostringstream ostr;
+  oss.copyfmt(ostr);
+}
 
